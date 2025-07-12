@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Get list of all network interfaces excluding loopback
+INTERFACES=($(ls /sys/class/net | grep -v lo))
+
+# Check if any interfaces found
+if [ ${#INTERFACES[@]} -eq 0 ]; then
+  echo "No network interfaces found."
+  exit 1
+fi
+
+echo "Available network interfaces:"
+# Display interfaces with numbers
+for i in "${!INTERFACES[@]}"; do
+  echo "$((i+1))) ${INTERFACES[$i]}"
+done
+
+# Ask user to choose interface by number
+read -p "Select the interface number to change MAC address: " choice
+
+# Validate choice is a number and in range
+if ! [[ "$choice" =~ ^[0-9]+$ ]]  [ "$choice" -lt 1 ]  [ "$choice" -gt "${#INTERFACES[@]}" ]; then
+  echo "Invalid choice. Exiting."
+  exit 1
+fi
+
+# Get the selected interface
+SELECTED_IFACE=${INTERFACES[$((choice-1))]}
+
+echo "[*] Bringing down interface $SELECTED_IFACE..."
+sudo ifconfig $SELECTED_IFACE down
+
+echo "[*] Changing MAC address of $SELECTED_IFACE to a random one..."
+sudo macchanger -r $SELECTED_IFACE
+
+echo "[*] Bringing up interface $SELECTED_IFACE..."
+sudo ifconfig $SELECTED_IFACE up
+
+echo "[*] New MAC address info for $SELECTED_IFACE:"
+macchanger -s $SELECTED_IFACE
